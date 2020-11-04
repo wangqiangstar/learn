@@ -1,0 +1,391 @@
+> 来自Wikipedia的解释：在面向对象的编程中，class是用于创建对象的可扩展的程序代码模版，它为对象提供了状态（成员变量）的初始值和行为（成员函数或方法）的实现。
+
+
+
+在日常开发中，我们经常需要创建许多相同类型的对象，例如用户（users）、商品（goods）或者任何其他东西。
+
+正如我们在 [构造函数和操作符 "new"](https://juejin.im/post/5e6dbf5ef265da572f142fbb) 一章中已经学到的，`new function` 可以帮助我们实现这种需求。
+
+但在现代 JavaScript 中，还有一个更高级的“类（class）”构造方式，它引入许多非常棒的新功能，这些功能对于面向对象编程很有用。
+
+## “class” 语法
+
+基本语法是：
+
+```
+class MyClass {
+  // class 方法
+  constructor() { ... }
+  method1() { ... }
+  method2() { ... }
+  method3() { ... }
+  ...
+}
+```
+
+然后使用 `new MyClass()` 来创建具有上述列出的所有方法的新对象。
+
+`new` 会自动调用 `constructor()` 方法，因此我们可以在 `constructor()` 中初始化对象。
+
+例如：
+
+```
+class User {
+
+  constructor(name) {
+    this.name = name;
+  }
+
+  sayHi() {
+    alert(this.name);
+  }
+
+}
+
+// 用法：
+let user = new User("John");
+user.sayHi();
+```
+
+当 `new User("John")` 被调用：
+
+1. 一个新对象被创建。
+2. `constructor` 使用给定的参数运行，并为其分配 `this.name`。
+
+……然后我们就可以调用对象方法了，例如 `user.sayHi`。
+
+类的方法之间没有逗号
+
+对于新手开发人员来说，常见的陷阱是在类的方法之间放置逗号，这会导致语法错误。
+
+不要把这里的符号与对象字面量相混淆。在类中，不需要逗号。
+
+## 什么是 class？
+
+所以，`class` 到底是什么？正如人们可能认为的那样，这不是一个全新的语言级实体。
+
+让我们揭开其神秘面纱，看看类究竟是什么。这将有助于我们理解许多复杂的方面。
+
+在 JavaScript 中，类是一种函数。
+
+看看下面这段代码：
+
+```
+class User {
+  constructor(name) { this.name = name; }
+  sayHi() { alert(this.name); }
+}
+
+// 佐证：User 是一个函数
+alert(typeof User); // function
+```
+
+`class User {...}` 构造实际上做了如下的事儿：
+
+1. 创建一个名为 `User` 的函数，该函数成为类声明的结果。该函数的代码来自于 `constructor` 方法（如果我们不编写这种方法，那么它就被假定为空）。
+2. 存储类中的方法，例如 `User.prototype` 中的 `sayHi`。
+
+当 `new User` 对象被创建后，当我们调用其方法时，它会从原型中获取对应的方法，正如我们在 [F.prototype](https://juejin.im/post/5e6de95e5188252c06113b06) 一章中所讲的那样。因此，对象 `new User` 可以访问类中的方法。
+
+我们可以将 `class User` 声明的结果解释为：
+
+下面这些代码很好地解释了它们：
+
+```
+class User {
+  constructor(name) { this.name = name; }
+  sayHi() { alert(this.name); }
+}
+
+// class 是函数 function
+alert(typeof User); // function
+
+// ...或者，更确切地说，是构造器方法
+alert(User === User.prototype.constructor); // true
+
+// 方法在 User.prototype 中，例如：
+alert(User.prototype.sayHi); // alert(this.name);
+
+// 在原型中实际上有两个方法
+alert(Object.getOwnPropertyNames(User.prototype)); // constructor, sayHi
+```
+
+## 不仅仅是语法糖
+
+人们常说 `class` 是一个语法糖（旨在使内容更易阅读，但不引入任何新内容的语法），因为我们实际上可以在没有 `class` 的情况下声明相同的内容：
+
+```
+// 用纯函数重写 class User
+
+// 1. 创建构造器函数
+function User(name) {
+  this.name = name;
+}
+// 任何函数原型默认都具有构造器属性，
+// 所以，我们不需要创建它
+
+// 2. 将方法添加到原型
+User.prototype.sayHi = function() {
+  alert(this.name);
+};
+
+// 用法：
+let user = new User("John");
+user.sayHi();
+```
+
+这个定义的结果与使用类得到的结果基本相同。因此，这确实是将 `class` 视为一种定义构造函数及其原型方法的语法糖的理由。
+
+尽管，它们之间存在着重大差异：
+
+1. 首先，通过 `class` 创建的函数具有特殊的内部属性标记 `[[FunctionKind]]:"classConstructor"`。因此，它与手动创建并不完全相同。
+
+   不像普通函数，调用类构造器时必须要用 `new` 关键词：
+
+   ```
+   class User {
+     constructor() {}
+   }
+   
+   alert(typeof User); // function
+   User(); // Error: Class constructor User cannot be invoked without 'new'
+   ```
+
+   此外，大多数 JavaScript 引擎中的类构造器的字符串表示形式都以 “class…” 开头
+
+   ```
+   class User {
+     constructor() {}
+   }
+   
+   alert(User); // class User { ... }
+   ```
+
+2. 类方法不可枚举。 类定义将 `"prototype"` 中的所有方法的 `enumerable` 标志设置为 `false`。
+
+   这很好，因为如果我们对一个对象调用 `for..in` 方法，我们通常不希望 class 方法出现。
+
+3. 类总是使用 `use strict`。 在类构造中的所有代码都将自动进入严格模式。
+
+此外，`class` 语法还带来了许多其他功能，我们稍后将会探索它们。
+
+## 类表达式
+
+就像函数一样，类可以在另外一个表达式中被定义，被传递，被返回，被赋值等。
+
+这是一个类表达式的例子：
+
+```
+let User = class {
+  sayHi() {
+    alert("Hello");
+  }
+};
+```
+
+类似于命名函数表达式（Named Function Expressions），类表达式可能也应该有一个名字。
+
+如果类表达式有名字，那么该名字仅在类内部可见：
+
+```
+// “命名类表达式（Named Class Expression）”
+// (规范中没有这样的术语，但是它和命名函数表达式类似)
+let User = class MyClass {
+  sayHi() {
+    alert(MyClass); // MyClass 这个名字仅在类内部可见
+  }
+};
+
+new User().sayHi(); // 正常运行，显示 MyClass 中定义的内容
+
+alert(MyClass); // error，MyClass 在外部不可见
+```
+
+我们甚至可以动态地“按需”创建类，就像这样：
+
+```
+function makeClass(phrase) {
+  // 声明一个类并返回它
+  return class {
+    sayHi() {
+      alert(phrase);
+    };
+  };
+}
+
+// 创建一个新的类
+let User = makeClass("Hello");
+
+new User().sayHi(); // Hello
+```
+
+## Getters/setters 及其他速记
+
+就像对象字面量，类可能包括 getters/setters，计算属性（computed properties）等。
+
+这是一个使用 `get/set` 实现 `user.name` 的示例：
+
+```
+class User {
+
+  constructor(name) {
+    // 调用 setter
+    this.name = name;
+  }
+
+  get name() {
+    return this._name;
+  }
+
+  set name(value) {
+    if (value.length < 4) {
+      alert("Name is too short.");
+      return;
+    }
+    this._name = value;
+  }
+
+}
+
+let user = new User("John");
+alert(user.name); // John
+
+user = new User(""); // Name is too short.
+```
+
+类声明在 `User.prototype` 中创建 getters 和 setters，就像这样：
+
+```
+Object.defineProperties(User.prototype, {
+  name: {
+    get() {
+      return this._name
+    },
+    set(name) {
+      // ...
+    }
+  }
+});
+```
+
+这是一个 `[...]` 中有计算属性名称（computed property name）的例子：
+
+```
+class User {
+
+  ['say' + 'Hi']() {
+    alert("Hello");
+  }
+
+}
+
+new User().sayHi();
+```
+
+## Class 属性
+
+旧的浏览器可能需要 polyfill
+
+类级别的属性是最近才添加到语言中的。
+
+在上面的例子中，`User` 只有方法。现在我们为其添加一个属性：
+
+```
+class User {
+  name = "Anonymous";
+
+  sayHi() {
+    alert(`Hello, ${this.name}!`);
+  }
+}
+
+new User().sayHi();
+
+alert(User.prototype.sayHi); // 被放在 User.prototype 中
+alert(User.prototype.name); // undefined，没有被放在 User.prototype 中
+```
+
+`name` 属性没有被放在 `User.prototype` 中。相反，它是在调用构造器之前通过 `new` 分创建的，它是对象自身的属性。
+
+## 总结
+
+基本的类语法看起来像这样：
+
+```
+class MyClass {
+  prop = value; // 属性
+
+  constructor(...) { // 构造器
+    // ...
+  }
+
+  method(...) {} // method
+
+  get something(...) {} // getter 方法
+  set something(...) {} // setter 方法
+
+  [Symbol.iterator]() {} // 有计算名称（computed name）的方法（此处为 symbol）
+  // ...
+}
+```
+
+技术上来说，`MyClass` 是一个函数（我们提供作为 `constructor` 的那个），而 methods、getters 和 settors 都被写入了 `MyClass.prototype`。
+
+在下一章，我们将会进一步学习类的相关知识，包括继承和其他功能。
+
+## 一个小栗子
+
+### 重写为 class
+
+
+
+```
+重要程度: *****
+```
+
+`Clock` 类是以函数式编写的。请以 “class” 语法重写它。
+
+P.S. 时钟在控制台（console）中滴答，打开控制台即可查看。
+
+解决方案
+
+```
+class Clock {
+  constructor({ template }) {
+    this.template = template;
+  }
+
+  render() {
+    let date = new Date();
+
+    let hours = date.getHours();
+    if (hours < 10) hours = '0' + hours;
+
+    let mins = date.getMinutes();
+    if (mins < 10) mins = '0' + mins;
+
+    let secs = date.getSeconds();
+    if (secs < 10) secs = '0' + secs;
+
+    let output = this.template
+      .replace('h', hours)
+      .replace('m', mins)
+      .replace('s', secs);
+
+    console.log(output);
+  }
+
+  stop() {
+    clearInterval(this.timer);
+  }
+
+  start() {
+    this.render();
+    this.timer = setInterval(() => this.render(), 1000);
+  }
+}
+
+
+let clock = new Clock({template: 'h:m:s'});
+clock.start();
+```
